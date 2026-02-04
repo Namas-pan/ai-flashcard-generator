@@ -1,7 +1,7 @@
 {
     "id": "ai-flashcard-generator",
     "name": "AI Flashcard Generator",
-    "author": "Your Name",
+    "author": "Namas-pan",
     "description": "使用 AI（OpenAI/Claude）从文本自动生成多种类型的记忆卡片",
     "version": {
         "major": 1,
@@ -9,7 +9,7 @@
         "patch": 0
     },
     "manifestVersion": 1,
-    "repoUrl": "https://github.com/your-repo/ai-flashcard-generator",
+    "repoUrl": "https://github.com/Namas-pan/ai-flashcard-generator",
     "requiredScopes": [
         {
             "type": "All",
