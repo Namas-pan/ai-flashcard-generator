@@ -1,0 +1,29 @@
+{
+    "compilerOptions": {
+        "target": "esnext",
+        "module": "esnext",
+        "jsx": "react-jsx",
+        "moduleResolution": "node",
+        "strict": true,
+        "strictNullChecks": true,
+        "noEmit": true,
+        "allowJs": true,
+        "skipLibCheck": true,
+        "isolatedModules": true,
+        "esModuleInterop": true,
+        "baseUrl": ".",
+        "paths": {
+            "@/*": [
+                "src/*"
+            ]
+        }
+    },
+    "ts-node": {
+        "compilerOptions": {
+            "module": "CommonJS"
+        }
+    },
+    "include": [
+        "src"
+    ]
+}
