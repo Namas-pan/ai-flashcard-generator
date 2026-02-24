@@ -35,7 +35,7 @@ npm run dev
 4. 在 RemNote 中加载插件：
    - 打开 RemNote → Settings → Plugins
    - 点击 "Build a plugin"
-   - 输入开发服务器地址：`http://localhost:5173`
+   - 输入开发服务器地址：`http://localhost:8080`
 
 ### 配置
 
