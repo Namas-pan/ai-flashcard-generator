@@ -27,7 +27,7 @@ export interface AISettings {
 }
 
 // 输入源类型
-export type InputSource = 'selection' | 'upload' | 'paste';
+export type InputSource = 'selection' | 'upload' | 'paste' | 'url';
 
 // 生成请求
 export interface GenerateRequest {

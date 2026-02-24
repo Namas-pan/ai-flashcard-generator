@@ -14,6 +14,7 @@ function InputPanel() {
     // 状态
     const [activeTab, setActiveTab] = useState<InputSource>('paste');
     const [pasteText, setPasteText] = useState('');
+    const [urlInput, setUrlInput] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -120,6 +121,7 @@ function InputPanel() {
         try {
             // 获取文本内容
             let text = '';
+            let isUrlMode = false;
 
             if (activeTab === 'paste') {
                 text = pasteText;
@@ -129,16 +131,34 @@ function InputPanel() {
                 // 获取当前选中的文本
                 const selection = await plugin.editor.getSelectedText();
                 text = String(selection || '');
+            } else if (activeTab === 'url') {
+                const rawInput = urlInput.trim();
+                if (!rawInput) {
+                    throw new Error('请输入 URL 链接');
+                }
+                // 解析多行 URL
+                const urls = rawInput
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0);
+
+                const invalidUrls = urls.filter(u => !/^https?:\/\/.+/i.test(u));
+                if (invalidUrls.length > 0) {
+                    throw new Error(`以下链接格式无效（需以 http:// 或 https:// 开头）：\n${invalidUrls.join('\n')}`);
+                }
+                isUrlMode = true;
             }
 
-            // 验证文本
-            const validation = validateText(text);
-            if (!validation.valid) {
-                throw new Error(validation.error);
-            }
+            // 验证文本（URL 模式下跳过，因为传给 AI 的是链接而非正文）
+            if (!isUrlMode) {
+                const validation = validateText(text);
+                if (!validation.valid) {
+                    throw new Error(validation.error);
+                }
 
-            // 预处理文本
-            text = preprocessText(text);
+                // 预处理文本
+                text = preprocessText(text);
+            }
 
             // 调用 AI 服务
             const aiService = createAIService({
@@ -149,10 +169,38 @@ function InputPanel() {
                 maxCards: Number(settings.maxCards),
             });
 
-            const response = await aiService.generateFlashcards(text, enabledTypes);
+            let allCards: import('../types').FlashcardData[] = [];
 
-            if (!response.success || !response.cards) {
-                throw new Error(response.error || '生成失败');
+            if (isUrlMode) {
+                // 批量处理多个 URL
+                const urls = urlInput.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                const errors: string[] = [];
+
+                for (let i = 0; i < urls.length; i++) {
+                    setError(null);
+                    // 更新加载提示，显示当前进度
+                    const response = await aiService.generateFlashcardsFromUrl(urls[i], enabledTypes);
+                    if (response.success && response.cards) {
+                        allCards = allCards.concat(response.cards);
+                    } else {
+                        errors.push(`链接 ${i + 1}: ${response.error || '生成失败'}`);
+                    }
+                }
+
+                if (allCards.length === 0) {
+                    throw new Error('所有链接均未能生成卡片\n' + errors.join('\n'));
+                }
+
+                if (errors.length > 0) {
+                    // 部分成功时记录警告
+                    console.warn('部分链接处理失败:', errors);
+                }
+            } else {
+                const response = await aiService.generateFlashcards(text, enabledTypes);
+                if (!response.success || !response.cards) {
+                    throw new Error(response.error || '生成失败');
+                }
+                allCards = response.cards;
             }
 
             // 根据用户输入的文件夹名称确定存放位置
@@ -167,7 +215,7 @@ function InputPanel() {
             // 创建卡片
             const generator = new CardGenerator(plugin);
             const createdRems = await generator.createFlashcards(
-                response.cards,
+                allCards,
                 parentRemId
             );
 
@@ -176,6 +224,8 @@ function InputPanel() {
             // 清空输入
             if (activeTab === 'paste') {
                 setPasteText('');
+            } else if (activeTab === 'url') {
+                setUrlInput('');
             }
 
             // 显示成功消息
@@ -187,7 +237,7 @@ function InputPanel() {
         } finally {
             setIsLoading(false);
         }
-    }, [activeTab, pasteText, selectedFile, enabledTypes, settings, plugin, folderName]);
+    }, [activeTab, pasteText, selectedFile, urlInput, enabledTypes, settings, plugin, folderName]);
 
     // 现代化样式
     const styles = {
@@ -437,6 +487,12 @@ function InputPanel() {
                 >
                     📁 上传
                 </button>
+                <button
+                    style={styles.tab(activeTab === 'url')}
+                    onClick={() => setActiveTab('url')}
+                >
+                    🔗 链接
+                </button>
             </div>
 
             {/* 输入区域 */}
@@ -489,6 +545,20 @@ function InputPanel() {
                                 <div style={styles.fileUploadHint}>支持 TXT, MD, PDF</div>
                             </label>
                         )}
+                    </div>
+                )}
+
+                {activeTab === 'url' && (
+                    <div>
+                        <textarea
+                            style={styles.textarea}
+                            placeholder={'每行输入一个链接，支持批量处理\n例如：\nhttps://example.com/article1\nhttps://example.com/article2'}
+                            value={urlInput}
+                            onChange={(e) => setUrlInput(e.target.value)}
+                        />
+                        <div style={styles.hint}>
+                            💡 每行一个链接，AI 将逐个读取并生成卡片（需模型支持联网）
+                        </div>
                     </div>
                 )}
             </div>

@@ -37,6 +37,43 @@ ${text}`;
 }
 
 /**
+ * 构建 URL 模式的 AI Prompt，让 AI 读取链接内容并生成卡片
+ */
+export function buildUrlPrompt(url: string, cardTypes: CardType[], maxCards: number): string {
+    const cardTypeDescriptions = getCardTypeDescriptions(cardTypes);
+
+    return `你是一个专业的教育内容分析师。请访问以下链接，阅读其中的内容，提取关键知识点并生成记忆卡片。
+
+## 任务说明
+1. 请先读取链接中的文档/网页内容
+2. 仔细分析内容，识别重要的知识点、概念、定义、关系等
+3. 为每个知识点选择最合适的卡片类型
+4. 确保问题清晰具体，答案准确简洁
+5. 生成 ${maxCards} 张以内的卡片
+
+## 可用的卡片类型
+${cardTypeDescriptions}
+
+## 输出格式
+请严格按照以下 JSON 格式输出，不要添加任何其他内容：
+\`\`\`json
+[
+  {"type": "卡片类型", "front": "问题/正面", "back": "答案/反面"},
+  {"type": "cloze", "front": "", "back": "", "clozeText": "完整句子，关键词用{{双大括号}}包裹"}
+]
+\`\`\`
+
+## 注意事项
+- type 必须是以下之一：${cardTypes.map(t => `"${t}"`).join(', ')}
+- cloze 类型的卡片必须包含 clozeText 字段
+- list 类型的 back 字段必须是字符串数组
+- 确保 JSON 格式正确，可以被解析
+
+## 待读取的链接
+${url}`;
+}
+
+/**
  * 获取卡片类型描述
  */
 function getCardTypeDescriptions(cardTypes: CardType[]): string {
